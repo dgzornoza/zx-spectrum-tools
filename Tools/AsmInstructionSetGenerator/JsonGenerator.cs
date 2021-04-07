@@ -127,7 +127,7 @@ namespace AsmInstructionSetGenerator
             OpcodeInfoModel opcodeInfoModel = new ()
             {
                 GroupName = groupName,
-                Name = text.Substring(0, text.IndexOf('\n')),
+                Keyword = text.Substring(0, text.IndexOf('\n')),
                 Operation = GetTextBetweenSections(text, "Operation", "Op Code"),
                 Opcode = GetTextBetweenSections(text, "Op Code", "Operands"),
                 Operands = GetTextBetweenSections(text, "Operands", "Description"),
