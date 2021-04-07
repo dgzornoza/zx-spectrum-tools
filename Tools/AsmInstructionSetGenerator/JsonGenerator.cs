@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using AsmInstructionSetGenerator.Models;
 using iText.Kernel.Pdf;
@@ -13,17 +15,20 @@ namespace AsmInstructionSetGenerator
 {
     public class JsonGenerator : IDisposable
     {
-        /// <summary>offset between page number and pdf page number</summary>
+        /// <summary>offset between page number and pdf page number.</summary>
         private const int PageOffset = 14;
-        private const string KeyPageNumberRegex = "page";
 
-        /// <summary>Header regex, format {0} => page number</summary>
+        /// <summary>Header regex, format {0} => page number.</summary>
         private const string HeaderRegex = "Z80\\sCPU\\nUser\\sManual\\n{0}\\n";
         private static readonly Regex FooterRegex = new ("(UM008011-0816 Z80 Instruction Description)|(Z80 Instruction Set UM008011-0816)");
 
-        private static readonly IEnumerable<int> OpcodesGroupsPages = new List<int> { 70, 98, 123, 144, 172, 187, 204, 242, 261, 280, 294, };
+        /// <summary>opcodes groups index pages in pdf.</summary>
+        private static readonly IEnumerable<int> OpcodesGroupsPages = new List<int> { 70, 98, 123, 144, 172, 187, 204, 242, 261, 280, 294 };
 
-        private static readonly Regex OpcodePageIndexRegex = new ($"^(?:.[^–]*)\\s–\\ssee\\spage\\s(?<{KeyPageNumberRegex}>\\d*)$");
+        /// <summary>Regex for get opcodes page numbers from opcode group index page.</summary>
+        private static readonly Regex OpcodeIndexPageRegex = new ($"^(?:.[^–]*)\\s–\\ssee\\spage\\s(?<page>\\d*)$");
+
+        /// <summary>Z80 pdf user manual.</summary>
         private static readonly string Z80UserManualPdfPath = $"{Assembly.GetEntryAssembly().GetName().Name}.Resources.AssemblerZ80.pdf";
 
         private PdfDocument z80UserManualPdf;
@@ -34,10 +39,11 @@ namespace AsmInstructionSetGenerator
             LoadPdf();
         }
 
+
         public string ExtractInstructionSet()
         {
-            IEnumerable<OpcodeGroupModel> result = OpcodesGroupsPages.Select(ReadOpcodesGroupFromPageNumber).ToList();
-            return Newtonsoft.Json.JsonConvert.SerializeObject(result);
+            IEnumerable<OpcodeInfoModel> result = OpcodesGroupsPages.SelectMany(ReadOpcodesGroupFromPageNumber).ToList();
+            return JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
 
 
@@ -57,7 +63,7 @@ namespace AsmInstructionSetGenerator
         }
 
 
-        private OpcodeGroupModel ReadOpcodesGroupFromPageNumber(int pageNumber)
+        private IEnumerable<OpcodeInfoModel> ReadOpcodesGroupFromPageNumber(int pageNumber)
         {
             PdfPage page = z80UserManualPdf.GetPage(pageNumber + PageOffset);
 
@@ -67,27 +73,19 @@ namespace AsmInstructionSetGenerator
 
             IEnumerable<string> textLines = text.Split('\n');
 
-            // resultmodel
-            OpcodeGroupModel result = new ()
-            {
-                GroupName = textLines.First(),
-            };
+            string groupName = textLines.First();
 
-            IEnumerable<int> opcodesPages = textLines.Where(item => OpcodePageIndexRegex.IsMatch(item))
-                .Select(item => int.Parse(OpcodePageIndexRegex.Match(item).Groups[KeyPageNumberRegex].Value));
+            IEnumerable<int> opcodesPages = textLines.Where(item => OpcodeIndexPageRegex.IsMatch(item))
+                .Select(item => int.Parse(OpcodeIndexPageRegex.Match(item).Groups["page"].Value));
 
             // extract opcodes from current page + page numbers
-            result.Opcodes = opcodesPages.Zip(opcodesPages.Skip(1), (current, next) => ExtractOpcodeInfo(current, next - current)).ToList();
-
-            return result;
+            return opcodesPages.Zip(opcodesPages.Skip(1), (current, next) => ExtractOpcodeInfo(groupName, current, next - current));
         }
 
 
-        private OpcodeInfoModel ExtractOpcodeInfo(int startPageNumber, int pages)
+        private OpcodeInfoModel ExtractOpcodeInfo(string groupName, int startPageNumber, int pages)
         {
-            OpcodeInfoModel opcodeInfoModel = new ();
-
-            string text = string.Empty;
+            StringBuilder strBuilder = new StringBuilder();
             for (int i = startPageNumber; i < startPageNumber + pages; i++)
             {
                 PdfPage page = z80UserManualPdf.GetPage(i + PageOffset);
@@ -95,18 +93,22 @@ namespace AsmInstructionSetGenerator
                 string pageText = PdfTextExtractor.GetTextFromPage(page, new LocationTextExtractionStrategy());
                 pageText = RemoveHeaderAndFooter(pageText, i);
 
-                text += $"{pageText}{Environment.NewLine}";
+                strBuilder.Append($"{pageText}{Environment.NewLine}");
             }
 
-            opcodeInfoModel.Name = text.Substring(0, text.IndexOf('\n'));
-            opcodeInfoModel.Operation = GetTextBetweenSections(text, "Operation", "Op Code");
-            opcodeInfoModel.Opcode = GetTextBetweenSections(text, "Op Code", "Operands");
-            opcodeInfoModel.Operands = GetTextBetweenSections(text, "Operands", "Description");
-            opcodeInfoModel.Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected");
-            opcodeInfoModel.ConditionBitsAffected = GetTextBetweenSections(text, "Condition Bits Affected", "Example");
-
+            string text = strBuilder.ToString();
             int indexOfExample = text.IndexOf("Example");
-            opcodeInfoModel.Example = indexOfExample > 0 ? text.Substring(indexOfExample) : null;
+            OpcodeInfoModel opcodeInfoModel = new OpcodeInfoModel()
+            {
+                GroupName = groupName,
+                Name = text.Substring(0, text.IndexOf('\n')),
+                Operation = GetTextBetweenSections(text, "Operation", "Op Code"),
+                Opcode = GetTextBetweenSections(text, "Op Code", "Operands"),
+                Operands = GetTextBetweenSections(text, "Operands", "Description"),
+                Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected"),
+                ConditionBitsAffected = GetTextBetweenSections(text, "Condition Bits Affected", "Example"),
+                Example = indexOfExample > 0 ? text[indexOfExample..] : null,
+            };
 
             return opcodeInfoModel;
         }

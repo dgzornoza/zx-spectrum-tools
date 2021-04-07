@@ -1,4 +1,5 @@
-﻿
+﻿using System.Text.Json.Serialization;
+
 namespace AsmInstructionSetGenerator.Models
 {
     /// <summary>
@@ -6,6 +7,8 @@ namespace AsmInstructionSetGenerator.Models
     /// </summary>
     public class OpcodeInfoModel
     {
+        public string GroupName { get; set; }
+
         public string Name { get; set; }
 
         public string Operation { get; set; }

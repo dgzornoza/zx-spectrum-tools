@@ -20,3 +20,6 @@ dotnet_diagnostic.SA1649.severity = none
 
 # SA1507: Code should not contain multiple blank lines in a row
 dotnet_diagnostic.SA1507.severity = none
+
+# SA1633: File should have header
+dotnet_diagnostic.SA1633.severity = none
