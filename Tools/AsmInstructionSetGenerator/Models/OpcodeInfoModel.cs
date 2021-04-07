@@ -22,5 +22,7 @@ namespace AsmInstructionSetGenerator.Models
         public string Description { get; set; }
 
         public string Example { get; set; }
+
+        public string Link { get; set; }
     }
 }

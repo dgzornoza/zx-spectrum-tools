@@ -108,6 +108,7 @@ namespace AsmInstructionSetGenerator
                 Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected"),
                 ConditionBitsAffected = GetTextBetweenSections(text, "Condition Bits Affected", "Example"),
                 Example = indexOfExample > 0 ? text[indexOfExample..] : null,
+                Link = ,
             };
 
             return opcodeInfoModel;
