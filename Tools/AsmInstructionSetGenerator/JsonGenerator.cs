@@ -15,6 +15,9 @@ namespace AsmInstructionSetGenerator
 {
     public class JsonGenerator : IDisposable
     {
+        /// <summary>Z80 user manual in github pages for create links to pdf opcodes pages and view online.</summary>
+        private const string Z80UserManualUrl = "https://dgzornoza.github.io/zx-spectrum-tools/Docs/AssemblerZ80.pdf#page=";
+
         /// <summary>offset between page number and pdf page number.</summary>
         private const int PageOffset = 14;
 
@@ -32,6 +35,7 @@ namespace AsmInstructionSetGenerator
         private static readonly string Z80UserManualPdfPath = $"{Assembly.GetEntryAssembly().GetName().Name}.Resources.AssemblerZ80.pdf";
 
         private PdfDocument z80UserManualPdf;
+        private bool disposedValue;
 
 
         public JsonGenerator()
@@ -40,10 +44,32 @@ namespace AsmInstructionSetGenerator
         }
 
 
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+
         public string ExtractInstructionSet()
         {
             IEnumerable<OpcodeInfoModel> result = OpcodesGroupsPages.SelectMany(ReadOpcodesGroupFromPageNumber).ToList();
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        }
+
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects)
+                    z80UserManualPdf.Close();
+                }
+
+                disposedValue = true;
+            }
         }
 
 
@@ -85,7 +111,7 @@ namespace AsmInstructionSetGenerator
 
         private OpcodeInfoModel ExtractOpcodeInfo(string groupName, int startPageNumber, int pages)
         {
-            StringBuilder strBuilder = new StringBuilder();
+            StringBuilder strBuilder = new ();
             for (int i = startPageNumber; i < startPageNumber + pages; i++)
             {
                 PdfPage page = z80UserManualPdf.GetPage(i + PageOffset);
@@ -98,7 +124,7 @@ namespace AsmInstructionSetGenerator
 
             string text = strBuilder.ToString();
             int indexOfExample = text.IndexOf("Example");
-            OpcodeInfoModel opcodeInfoModel = new OpcodeInfoModel()
+            OpcodeInfoModel opcodeInfoModel = new ()
             {
                 GroupName = groupName,
                 Name = text.Substring(0, text.IndexOf('\n')),
@@ -108,40 +134,10 @@ namespace AsmInstructionSetGenerator
                 Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected"),
                 ConditionBitsAffected = GetTextBetweenSections(text, "Condition Bits Affected", "Example"),
                 Example = indexOfExample > 0 ? text[indexOfExample..] : null,
-                Link = ,
+                Link = $"{Z80UserManualUrl}{startPageNumber + PageOffset}",
             };
 
             return opcodeInfoModel;
         }
-
-
-
-
-
-        #region [IDisposable]
-
-        private bool disposedValue;
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    // TODO: dispose managed state (managed objects)
-                    z80UserManualPdf.Close();
-                }
-
-                disposedValue = true;
-            }
-        }
-
-
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
-        }
-
-        #endregion [IDisposable]
     }
 }
