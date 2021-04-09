@@ -156,9 +156,6 @@ namespace AsmInstructionSetGenerator
                 Link = $"{Z80UserManualUrl}{startPageNumber + PageOffset}".Trim(),
             };
 
-            // remove carriage return in some properties
-            opcodeInfoModel
-
             return opcodeInfoModel;
         }
     }
