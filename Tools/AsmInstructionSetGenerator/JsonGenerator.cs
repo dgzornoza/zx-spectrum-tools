@@ -26,7 +26,20 @@ namespace AsmInstructionSetGenerator
         private static readonly Regex FooterRegex = new ("(UM008011-0816 Z80 Instruction Description)|(Z80 Instruction Set UM008011-0816)");
 
         /// <summary>opcodes groups index pages in pdf.</summary>
-        private static readonly IEnumerable<int> OpcodesGroupsPages = new List<int> { 70, 98, 123, 144, 172, 187, 204, 242, 261, 280, 294 };
+        private static readonly IEnumerable<OpcodesGroupPageIndex> OpcodesGroupsPages = new List<OpcodesGroupPageIndex>
+        {
+            new () { PageNumber = 70, LastOpcodePages = 1 },
+            new () { PageNumber = 98, LastOpcodePages = 1 },
+            new () { PageNumber = 123, LastOpcodePages = 2 },
+            new () { PageNumber = 144, LastOpcodePages = 2 },
+            new () { PageNumber = 172, LastOpcodePages = 1 },
+            new () { PageNumber = 187, LastOpcodePages = 1 },
+            new () { PageNumber = 204, LastOpcodePages = 2 },
+            new () { PageNumber = 242, LastOpcodePages = 2 },
+            new () { PageNumber = 261, LastOpcodePages = 2 },
+            new () { PageNumber = 280, LastOpcodePages = 2 },
+            new () { PageNumber = 294, LastOpcodePages = 2 },
+        };
 
         /// <summary>Regex for get opcodes page numbers from opcode group index page.</summary>
         private static readonly Regex OpcodeIndexPageRegex = new ($"^(?:.[^–]*)\\s–\\ssee\\spage\\s(?<page>\\d*)$");
@@ -74,7 +87,9 @@ namespace AsmInstructionSetGenerator
 
 
         private static string GetTextBetweenSections(string text, string startWordSection, string endWordSection) =>
-            Regex.Match(text, string.Format(@"(?<text>{0}\n.+)\n{1}", startWordSection, endWordSection), RegexOptions.IgnoreCase | RegexOptions.Singleline).Groups["text"].Value;
+            Regex.Match(text, $"{startWordSection}\n(?<text>.+)\n{endWordSection}", RegexOptions.IgnoreCase | RegexOptions.Singleline).Groups["text"].Value;
+
+        private static bool ContainsSection(string text, string wordSection) => Regex.IsMatch(text, $"^{wordSection}$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
         private static string RemoveHeaderAndFooter(string text, int pageNumber) =>
             FooterRegex.Replace(Regex.Replace(text, string.Format(HeaderRegex, pageNumber), string.Empty), string.Empty);
@@ -89,20 +104,23 @@ namespace AsmInstructionSetGenerator
         }
 
 
-        private IEnumerable<OpcodeInfoModel> ReadOpcodesGroupFromPageNumber(int pageNumber)
+        private IEnumerable<OpcodeInfoModel> ReadOpcodesGroupFromPageNumber(OpcodesGroupPageIndex opcodesGroupPageIndex)
         {
-            PdfPage page = z80UserManualPdf.GetPage(pageNumber + PageOffset);
+            PdfPage page = z80UserManualPdf.GetPage(opcodesGroupPageIndex.PageNumber + PageOffset);
 
             // get text withouth header
             string text = PdfTextExtractor.GetTextFromPage(page, new LocationTextExtractionStrategy());
-            text = RemoveHeaderAndFooter(text, pageNumber);
+            text = RemoveHeaderAndFooter(text, opcodesGroupPageIndex.PageNumber);
 
             IEnumerable<string> textLines = text.Split('\n');
 
             string groupName = textLines.First();
 
-            IEnumerable<int> opcodesPages = textLines.Where(item => OpcodeIndexPageRegex.IsMatch(item))
-                .Select(item => int.Parse(OpcodeIndexPageRegex.Match(item).Groups["page"].Value));
+            List<int> opcodesPages = textLines.Where(item => OpcodeIndexPageRegex.IsMatch(item))
+                .Select(item => int.Parse(OpcodeIndexPageRegex.Match(item).Groups["page"].Value)).ToList();
+
+            // add last page with range
+            opcodesPages.Add(opcodesPages.Last() + opcodesGroupPageIndex.LastOpcodePages);
 
             // extract opcodes from current page + page numbers
             return opcodesPages.Zip(opcodesPages.Skip(1), (current, next) => ExtractOpcodeInfo(groupName, current, next - current));
@@ -124,18 +142,22 @@ namespace AsmInstructionSetGenerator
 
             string text = strBuilder.ToString();
             int indexOfExample = text.IndexOf("Example");
+            int indexOfConditionBitsAffected = text.IndexOf("Condition Bits Affected");
             OpcodeInfoModel opcodeInfoModel = new ()
             {
-                GroupName = groupName,
-                Keyword = text.Substring(0, text.IndexOf('\n')),
-                Operation = GetTextBetweenSections(text, "Operation", "Op Code"),
-                Opcode = GetTextBetweenSections(text, "Op Code", "Operands"),
-                Operands = GetTextBetweenSections(text, "Operands", "Description"),
-                Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected"),
-                ConditionBitsAffected = GetTextBetweenSections(text, "Condition Bits Affected", "Example"),
-                Example = indexOfExample > 0 ? text[indexOfExample..] : null,
-                Link = $"{Z80UserManualUrl}{startPageNumber + PageOffset}",
+                GroupName = groupName.Trim(),
+                Keyword = text.Substring(0, text.IndexOf('\n')).Trim(),
+                Operation = GetTextBetweenSections(text, "Operation", "Op Code").Trim(),
+                Opcode = GetTextBetweenSections(text, "Op Code", "(Operand|Operands)").Trim(),
+                Operands = GetTextBetweenSections(text, "(Operand|Operands)", "Description").Trim(),
+                Description = GetTextBetweenSections(text, "Description", "Condition Bits Affected").Trim(),
+                ConditionBitsAffected = (indexOfExample > 0 ? GetTextBetweenSections(text, "Condition Bits Affected", "Example") : text[(indexOfConditionBitsAffected + "Condition Bits Affected".Length) ..]).Trim(),
+                Example = indexOfExample > 0 ? text[(indexOfExample + "Example".Length) ..].Trim() : null,
+                Link = $"{Z80UserManualUrl}{startPageNumber + PageOffset}".Trim(),
             };
+
+            // remove carriage return in some properties
+            opcodeInfoModel
 
             return opcodeInfoModel;
         }
