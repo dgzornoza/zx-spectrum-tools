@@ -140,7 +140,8 @@ namespace AsmInstructionSetGenerator
                 strBuilder.Append($"{pageText}{Environment.NewLine}");
             }
 
-            string text = strBuilder.ToString();
+            // replace apostrophe
+            string text = strBuilder.ToString().Replace('′', '\'');
             int indexOfExample = text.IndexOf("Example");
             int indexOfConditionBitsAffected = text.IndexOf("Condition Bits Affected");
             OpcodeInfoModel opcodeInfoModel = new ()
