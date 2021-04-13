@@ -8,7 +8,8 @@ namespace AsmInstructionSetGenerator
         {
             Directory.CreateDirectory("output");
 
-            string json = new JsonGenerator().ExtractInstructionSet();
+            using JsonGenerator jsonGenerator = new ();
+            string json = jsonGenerator.ExtractInstructionSet();
             File.WriteAllText("output/z80asm-keywords.json", json);
         }
     }
