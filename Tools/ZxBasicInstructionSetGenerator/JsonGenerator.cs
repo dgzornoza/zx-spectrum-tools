@@ -15,15 +15,14 @@ namespace ZxBasicInstructionSetGenerator
     public class JsonGenerator : IDisposable
     {
         private const string BaseUrl = "https://github.com";
+
         /// <summary>ZxBasic Reserved Identifiers url</summary>
         private readonly static string ZxBasicInstructionsUrl = $"{BaseUrl}/boriel/zxbasic/blob/master/docs/identifier.md";
         /// <summary>Regex for get main menu keywords and links</summary>
         private readonly static Regex menuRegex = new ("<li>.*<a\\s+href=\"(?<url>[^\"]*)\"\\s*>(?<keyword>[^<]*)</a>.*</li>", RegexOptions.Compiled);
-        /// <summary>Regex for select description title</summary>
-        private readonly static Regex titleRegex = new ("^#{1}[\\s\\w]*\\n+", RegexOptions.Compiled | RegexOptions.Multiline);
-        /// <summary>Regex for select description subtitles</summary>
-        private readonly static Regex subtitleRegex = new("^#{2}(?<subtitle>[\\s\\w]*)\\n+", RegexOptions.Compiled | RegexOptions.Multiline);
-        
+        /// <summary>Regex for select description titles, format 1,2,3,4,5,6 for format markdown titles </summary>
+        private readonly static string titleRegexPattern = "^\\#{{{0}}}(?<title>[^\\#\\r\\n]*)\\n*";
+
         private readonly static string[] bitwiseOperators = new string[] { "bAND", "bNOT", "bOR", "bXOR" };
         private readonly static string[] logicalOperators = new string[] { "AND", "NOT", "OR", "XOR" };
 
@@ -37,9 +36,6 @@ namespace ZxBasicInstructionSetGenerator
         // AND, NOT, OR, XOR
 
 
-
-
-
         public JsonGenerator()
         {
             webClient = new ();
@@ -50,7 +46,7 @@ namespace ZxBasicInstructionSetGenerator
         public async Task<string> ExtractInstructionSet()
         {
             IDictionary<string, string> allKeywords = await GetMainMenuKeywordsAndLinks();
-            
+            var a = string.Join(Environment.NewLine, allKeywords.Select(item => item.Key));
             IEnumerable<KeyValuePair<string, string>> keywordsLinks = allKeywords.Where(item => !bitwiseOperators.Concat(logicalOperators).Contains(item.Key));
             IEnumerable<KeyValuePair<string, string>> bitwiseOperatorsLinks = allKeywords.Where(item => bitwiseOperators.Contains(item.Key));
             IEnumerable<KeyValuePair<string, string>> logicalLinks = allKeywords.Where(item => logicalOperators.Contains(item.Key));
@@ -96,19 +92,26 @@ namespace ZxBasicInstructionSetGenerator
             string link = $"{BaseUrl}{keywordLink.Value}";
             string keyWordData;
             string description = null;
+
             try
             {
                 keyWordData = await webClient.DownloadStringTaskAsync($"{link}?raw=true");
                 Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => OK");
 
                 // remove titles
-                description = titleRegex.Replace(keyWordData, string.Empty);
+                description = Regex.Replace(keyWordData, string.Format(titleRegexPattern, 1), string.Empty);
 
-                // set subtitles in markdown bold
-                description = subtitleRegex.Replace(description, delegate (Match m)
+                // set titles ## (2) in markdown bold
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 2), delegate (Match m)
                 {
-                    return $"**{m.Groups["subtitle"]}**\n\n";
-                });
+                    return $"**{m.Groups["title"].Value.Trim()}**\n\n";
+                }, RegexOptions.Multiline);
+
+                // change titles ### (3) in markdown italic
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 3), delegate (Match m)
+                {
+                    return $"*{m.Groups["title"].Value.Trim()}*\n\n";
+                }, RegexOptions.Multiline);
             }
             catch (WebException ex)
             {
