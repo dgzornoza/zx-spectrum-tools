@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -20,18 +18,22 @@ namespace ZxBasicInstructionSetGenerator
         private readonly static string ZxBasicInstructionsUrl = $"{BaseUrl}/boriel/zxbasic/blob/master/docs/identifier.md";
         /// <summary>Regex for get main menu keywords and links</summary>
         private readonly static Regex menuRegex = new ("<li>.*<a\\s+href=\"(?<url>[^\"]*)\"\\s*>(?<keyword>[^<]*)</a>.*</li>", RegexOptions.Compiled);
+        /// <summary>Regex for hack markdown code region, replace \n\n for \n</summary>
+        private readonly static Regex hackCodeMarkdownRegex = new ("```[^`]*```", RegexOptions.Compiled | RegexOptions.Multiline);
+        /// <summary>Regex for add base uri to relative markdown links</summary>
+        private readonly static Regex linksReplaceRegex = new ("\\[.*\\]\\((?<url>.*)\\)", RegexOptions.Compiled | RegexOptions.Multiline);
+
         /// <summary>Regex for select description titles, format 1,2,3,4,5,6 for format markdown titles </summary>
-        private readonly static string titleRegexPattern = "^\\#{{{0}}}(?<title>[^\\#\\r\\n]*)\\n*";
+        private readonly static string titleRegexPattern = "^\\#{{{0}}}\\s*(?<title>\\w+[^\\r\\n]*)\\n+";
 
         private readonly static string[] bitwiseOperators = new string[] { "bAND", "bNOT", "bOR", "bXOR" };
         private readonly static string[] logicalOperators = new string[] { "AND", "NOT", "OR", "XOR" };
 
-        private readonly System.Net.WebClient webClient;
+        private readonly WebClient webClient;
+        private IEnumerable<KeywordInfoModel> alternativeKeywords;
         private bool disposedValue;
+        
 
-        // return => restore
-        // REM ???
-        // , ALIGN, END, EXP, GOTO, GOSUB, IN, len, ln,, or, out, pause, pi, SGN, StdCall, stop, to, 
         // bAND, bNOT, bOR, bXOR, 
         // AND, NOT, OR, XOR
 
@@ -39,6 +41,8 @@ namespace ZxBasicInstructionSetGenerator
         public JsonGenerator()
         {
             webClient = new ();
+            alternativeKeywords = JsonSerializer.Deserialize<IEnumerable<KeywordInfoModel>>(File.ReadAllText("Resources/AlternativeKeywords.json"), 
+                new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
 
         
@@ -46,7 +50,7 @@ namespace ZxBasicInstructionSetGenerator
         public async Task<string> ExtractInstructionSet()
         {
             IDictionary<string, string> allKeywords = await GetMainMenuKeywordsAndLinks();
-            var a = string.Join(Environment.NewLine, allKeywords.Select(item => item.Key));
+            
             IEnumerable<KeyValuePair<string, string>> keywordsLinks = allKeywords.Where(item => !bitwiseOperators.Concat(logicalOperators).Contains(item.Key));
             IEnumerable<KeyValuePair<string, string>> bitwiseOperatorsLinks = allKeywords.Where(item => bitwiseOperators.Contains(item.Key));
             IEnumerable<KeyValuePair<string, string>> logicalLinks = allKeywords.Where(item => logicalOperators.Contains(item.Key));
@@ -90,42 +94,66 @@ namespace ZxBasicInstructionSetGenerator
         private async Task<KeywordInfoModel> GetKeywordInfo(KeyValuePair<string, string> keywordLink)
         {
             string link = $"{BaseUrl}{keywordLink.Value}";
+            string linkFolder = link.Substring(0, link.LastIndexOf('/') + 1);
             string keyWordData;
-            string description = null;
+            string description = string.Empty;
 
             try
             {
                 keyWordData = await webClient.DownloadStringTaskAsync($"{link}?raw=true");
                 Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => OK");
 
+                // apply hack:
+                description = hackCodeMarkdownRegex.Replace(keyWordData, (match) => match.Value.Replace("\n\n", "\n"));
+
+                // set absolute urls in markdowns
+                description = linksReplaceRegex.Replace(keyWordData, (match) =>
+                {
+                    string urlValue = match.Groups["url"].Value;
+                    return urlValue.StartsWith("http") ? match.Value : match.Value.Replace(urlValue, $"{linkFolder}{urlValue}");
+                });
+                                
                 // remove titles
-                description = Regex.Replace(keyWordData, string.Format(titleRegexPattern, 1), string.Empty);
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 1), string.Empty);
 
                 // set titles ## (2) in markdown bold
-                description = Regex.Replace(description, string.Format(titleRegexPattern, 2), delegate (Match m)
-                {
-                    return $"**{m.Groups["title"].Value.Trim()}**\n\n";
-                }, RegexOptions.Multiline);
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 2), (match) => $"**{match.Groups["title"].Value.Trim()}**\n\n", RegexOptions.Multiline);
 
                 // change titles ### (3) in markdown italic
-                description = Regex.Replace(description, string.Format(titleRegexPattern, 3), delegate (Match m)
-                {
-                    return $"*{m.Groups["title"].Value.Trim()}*\n\n";
-                }, RegexOptions.Multiline);
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 3), (match) => $"*{match.Groups["title"].Value.Trim()}*\n\n", RegexOptions.Multiline);
             }
             catch (WebException ex)
             {
                 Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => ERROR: {ex.Message}");
+
+                description = TryGetFromAlternativeKeywords(keywordLink.Key.ToUpper());
             }
 
-            KeywordInfoModel result = new KeywordInfoModel
+            KeywordInfoModel result = new ()
             {
-                Keyword = keywordLink.Key,
+                Keyword = keywordLink.Key.ToUpper(),
                 Description = description,
                 Link = link,
             };
 
             return result;
+        }
+
+        private string TryGetFromAlternativeKeywords(string keyword)
+        {
+            Console.WriteLine("Try get from alternative keywords");
+            string result = alternativeKeywords.FirstOrDefault(item => item.Keyword == keyword)?.Description ?? string.Empty;
+            if (null == result) WriteToConsoleInColor(ConsoleColor.Red, "ERROR: Not found in alternative keywords");
+            else WriteToConsoleInColor(ConsoleColor.Green, "Found in alternative keywords");
+            return result;
+        }
+
+        private void WriteToConsoleInColor(ConsoleColor color, string text)
+        {
+            ConsoleColor current = Console.ForegroundColor;
+            Console.ForegroundColor = color;
+            Console.WriteLine(text);
+            Console.ForegroundColor = current;
         }
     }
 }

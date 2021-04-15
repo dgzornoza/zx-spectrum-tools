@@ -10,8 +10,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsmInstructionSetGenerator", "Tools\AsmInstructionSetGenerator\AsmInstructionSetGenerator.csproj", "{E7533DDB-E3F8-4BAC-9F98-1E2F4D52ABAD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZxBasicInstructionSetGenerator", "ZxBasicInstructionSetGenerator\ZxBasicInstructionSetGenerator.csproj", "{20C740F1-0BCB-4095-894D-1776ED5BE7DC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZxBasicInstructionSetGenerator", "Tools\ZxBasicInstructionSetGenerator\ZxBasicInstructionSetGenerator.csproj", "{B185BE1B-FB6F-4987-B84D-056181ECA0A5}"
 EndProject
 Global
@@ -24,10 +22,6 @@ Global
 		{E7533DDB-E3F8-4BAC-9F98-1E2F4D52ABAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E7533DDB-E3F8-4BAC-9F98-1E2F4D52ABAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E7533DDB-E3F8-4BAC-9F98-1E2F4D52ABAD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{20C740F1-0BCB-4095-894D-1776ED5BE7DC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{20C740F1-0BCB-4095-894D-1776ED5BE7DC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{20C740F1-0BCB-4095-894D-1776ED5BE7DC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{20C740F1-0BCB-4095-894D-1776ED5BE7DC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B185BE1B-FB6F-4987-B84D-056181ECA0A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B185BE1B-FB6F-4987-B84D-056181ECA0A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B185BE1B-FB6F-4987-B84D-056181ECA0A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,9 +29,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{20C740F1-0BCB-4095-894D-1776ED5BE7DC} = {471F8863-AC63-4CA0-B775-312411693E73}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2D455300-E4F4-409A-B7FC-FD0A5CB0ACF1}

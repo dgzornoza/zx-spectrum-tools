@@ -1,0 +1,67 @@
+﻿[
+  {
+    "keyword": "END",
+    "description": "Used for ending a program, an asm block, sub or function\n\n**Syntax**\n\nTo END the program\n```\nEND\n```\nTo end an asm block\n```\nasm\n    LD a, 5   ; Z80n assembly code\nend asm\n```\nAnd similar is used after a SUB or FUNCTION\n```\nsub mysub()\n    '..code\nend sub\n```\n```\nfunction hello()\n    '..code\nend function\n```\nMore info : https://github.com/boriel/zxbasic/blob/master/docs/while.md",
+    "link": ""
+  },
+  {
+    "keyword": "EXP",
+    "description": "You can raise one number to the power of another - that means 'multiply the first number by itself the second number of times'.\n\n**Remarks**\n This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "GOTO",
+    "description": "Jump to GO TO label\n\n**Example**\n\n```\nIF A = 10 GOTO APPLES\nIF A = 0 GOTO NOAPPLE\nAPPLES:\n    PRINT \"WE HAVE APPLES\" : STOP\nNOAPPLES:\n    PRINT \"NO APPLES\"\n```\n\n**Remarks**\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "GOSUB",
+    "description": "Jumps to the GO SUB label and continues until the return statement is encountered, which returns flow to the statement following GO SUB\n\n**Example**\n\n```\n10 REM \"A rearranged guessing game\"\n20 INPUT a: CLS\n30 INPUT \"Guess the number \",b\n40 IF a=b THEN PRINT \"Correct\": STOP\n50 IF a<B THENGO SUB 100\n60 IF A>b THEN GO SUB 100\n70 GO TO 30\n100 PRINT \"Try again\"\n110 RETURN\n```\n\n**Remarks**\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "IN",
+    "description": "Read ports into variable\n\n**Syntax**\n\nIN *port*\n\n**Remarks**\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "LEN",
+    "description": "Returns the length of *string\n\n**Syntax**\n\nLEN string\n\n\ta$ = \"Zelion\"\n\tPRINT LEN a$ : ' Will print 6\n\n\t a = 5\n\n**Remarks**\n\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "LN",
+    "description": "Calculates logarithms to the base e; these are called natural logarithms. To calculate logarithms to any other base, you must divide the natural logarithm by the natural logarithm of the base: \n\n\t a = 5\n\n**Syntax**\n\nLN x\n\n**Example**\n\n```logax = LN x/ LN a```\n\n**Remarks**\n\n- This function does exist in Sinclair BASIC.",
+    "link": ""
+  },
+  {
+    "keyword": "OUT",
+    "description": "Sends a byte of value to the specified port\n\n**Syntax**\n\nOUT *port,value*\n\n**Example**\n\n```\nOUT 254, 0 : ' sets border to blank, border is on port 254\n```\n\n**Remarks**\n\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "PAUSE",
+    "description": "PAUSE CPU for n frames (0-65535) if n=0 means PAUSE forever until a keypress.\n\n**Syntax**\n\nPAUSE n\n\n**Examples**\n\n```\nPAUSE 0 : REM This will wait for a keypress\nPAUSE 1 : REM this will wait 1 frame\n```\n\n**Remarks**\n\n- Using PAUSE will call ROM routine which may cause issues writing code for the NEX which can page out any part of memory. Use **WaitRetrace(n)** and **WaitKey()** instead.\n\n- This is compatible with Sinclair Basic",
+    "link": ""
+  },
+  {
+    "keyword": "PI",
+    "description": "Returns the value of PI\n\n**Example**\n\n```a = PI * 2```\n\n**Remarks**\n\n- This function is Sinclair BASIC compatible.",
+    "link": ""
+  },
+  {
+    "keyword": "SGN",
+    "description": "Is the sign function (sometimes called signum). It is the first function you have seen that has nothing to do with strings, because both its argument and its result are numbers. The result is +1 if the argument is positive, 0 if the argument is zero, and -1 if the argument is negative.\n\n**Example**\n\n```SGN a```\n\n**Remarks**\n\n- This statement is Sinclair BASIC compatible.",
+    "link": ""
+  },
+  {
+    "keyword": "STOP",
+    "description": "STOPs the program and exits \n\n- This function is Sinclair BASIC compatible.",
+    "link": ""
+  },
+  {
+    "keyword": "TO",
+    "description": "TO can be used with FOR as follows:\n\n**Examples**\n\n```\nFOR n = 0 TO 10\nPRINT n\nNEXT n\n```\nIt can also be use to select a portion of a string\n```\na$ = \"ZxSpectrum\"\nPRINT a$(0 TO 1) : REM will print \"Zx\"\nPRINT a$(2 TO ) : REM will print \"Spectrum\"\n```\n\n**Remarks**\n\n- This function is almost 100% Sinclair BASIC Compatible.",
+    "link": ""
+  }
+] 
