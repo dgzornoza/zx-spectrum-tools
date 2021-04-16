@@ -1,5 +1,45 @@
 ﻿[
   {
+    "keyword": "AND",
+    "description": "Performs the _Logical Conjunction_ and returns _TRUE_ if and only if both arguments are _TRUE_.\n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  False  | False |  False |\n|  False  | True  |  False |\n|  True  | False |  False |\n|  True  | True  |  True |\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/operators.md#AND"
+  },
+  {
+    "keyword": "OR",
+    "description": "Performs the _Logical Disjunction_ and returns _TRUE_ if any of the arguments is _TRUE_.\n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  False  | False |  False |\n|  False  | True  |  True |\n|  True  | False |  True |\n|  True  | True  |  True |\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/operators.md#AND"
+  },
+  {
+    "keyword": "XOR",
+    "description": "Performs a logical XOR and returns TRUE if one of the arguments is true and one of the arguments is false.\nIn essence, returns true if ONLY one of the arguments is true.\n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  False  | False |  False |\n|  False  | True  |  True |\n|  True  | False |  True |\n|  True  | True  |  False |\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/operators.md#AND"
+  },
+  {
+    "keyword": "NOT",
+    "description": "Performs the _Logical Negation_ and returns _TRUE_ if the arguments is _False_ and vice versa.\n\n| a  | result |\n|:----:|:----:|\n|  False  | True |\n|  True  | False |\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/operators.md#AND"
+  },
+  {
+    "keyword": "bAND",
+    "description": "Performs the _Bitwise Conjunction_ and returns 1 for every bit if and only if both bits are 1.\n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  0  | 0  |  0 |\n|  0  | 1  | 0 |\n|  1  | 0  |  0 |\n|  1  | 1  |  1 |\n\n**Example**\n\nBinary \"mask\" that will get only the 4 rightmost bits 0 1 2 3 of a number:\n\n`PRINT BIN 01110111 bAND BIN 00001111` will print 3, which is 0111`\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/bitwiselogic.md"
+  },
+  {
+    "keyword": "bOR",
+    "description": "Performs the _Bitwise Disjunction_ and returns 1 if any of the arguments is 1.\n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  0  | 0 |  0 |\n|  0  | 1  | 1 |\n|  1  | 0 |  1 |\n|  1  | 1  |  1 |\n\n**Example**\n\nEnsure an ASCII letter is always in lowercase:\n\n`PRINT CHR$(CODE \"A\" OR BIN 10000)` will print `a` because lowercase letters have bit 5 set.\n\n,",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/bitwiselogic.md"
+  },
+  {
+    "keyword": "bNOT",
+    "description": "Performs the _Bitwise Negation_ and returns _1_ if the arguments is _0_ and vice versa.\nBasically it flips all the bits in an integer number.\n\n| a  |result |\n|:----:|:------:|\n|  0  | 1  |\n|  1  | 0  |\n\n**#Example**\n\nInvert the first cell (upper-leftmost) in the screen:\n\n```\nPRINT AT 0, 0; \"A\";\nFOR i = 0 TO 3\n    POKE 16384 + 256 * i, bNOT PEEK(16384 + 256 * i)\nNEXT\n```\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/bitwiselogic.md"
+  },
+  {
+    "keyword": "bXOR",
+    "description": "Performs a logical XOR and returns 1 if one and only one of the arguments is 1, 0 if both bits are the same.\nIn essence, returns 1 ONLY if one of the arguments is 1. \n\n| a  | b  | result |\n|:----:|:----:|:------:|\n|  0  | 0 |  0 |\n|  0  | 1  | 1 |\n|  1  | 0 |  1 |\n|  1  | 1  |  0 |\n---\n**Example**\n\nFlips an ASCII letter from lower to uppercase and vice versa\n\n`PRINT CHR$(CODE \"A\" bXOR BIN 10000)`\n\n",
+    "link": "https://github.com/boriel/zxbasic/blob/master/docs/bitwiselogic.md"
+  },
+  {
     "keyword": "END",
     "description": "Used for ending a program, an asm block, sub or function\n\n**Syntax**\n\nTo END the program\n```\nEND\n```\nTo end an asm block\n```\nasm\n    LD a, 5   ; Z80n assembly code\nend asm\n```\nAnd similar is used after a SUB or FUNCTION\n```\nsub mysub()\n    '..code\nend sub\n```\n```\nfunction hello()\n    '..code\nend function\n```\nMore info : https://github.com/boriel/zxbasic/blob/master/docs/while.md",
     "link": ""
@@ -64,4 +104,6 @@
     "description": "TO can be used with FOR as follows:\n\n**Examples**\n\n```\nFOR n = 0 TO 10\nPRINT n\nNEXT n\n```\nIt can also be use to select a portion of a string\n```\na$ = \"ZxSpectrum\"\nPRINT a$(0 TO 1) : REM will print \"Zx\"\nPRINT a$(2 TO ) : REM will print \"Spectrum\"\n```\n\n**Remarks**\n\n- This function is almost 100% Sinclair BASIC Compatible.",
     "link": ""
   }
+
+
 ] 

@@ -25,12 +25,12 @@ namespace ZxBasicInstructionSetGenerator
 
         /// <summary>Regex for select description titles, format 1,2,3,4,5,6 for format markdown titles </summary>
         private readonly static string titleRegexPattern = "^\\#{{{0}}}\\s*(?<title>\\w+[^\\r\\n]*)\\n+";
-
+        
         private readonly static string[] bitwiseOperators = new string[] { "bAND", "bNOT", "bOR", "bXOR" };
         private readonly static string[] logicalOperators = new string[] { "AND", "NOT", "OR", "XOR" };
 
         private readonly WebClient webClient;
-        private IEnumerable<KeywordInfoModel> alternativeKeywords;
+        private IEnumerable<KeywordInfoModel> localKeywords;
         private bool disposedValue;
         
 
@@ -41,7 +41,7 @@ namespace ZxBasicInstructionSetGenerator
         public JsonGenerator()
         {
             webClient = new ();
-            alternativeKeywords = JsonSerializer.Deserialize<IEnumerable<KeywordInfoModel>>(File.ReadAllText("Resources/AlternativeKeywords.json"), 
+            localKeywords = JsonSerializer.Deserialize<IEnumerable<KeywordInfoModel>>(File.ReadAllText("Resources/LocalKeywords.json"), 
                 new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
 
@@ -55,8 +55,11 @@ namespace ZxBasicInstructionSetGenerator
             IEnumerable<KeyValuePair<string, string>> bitwiseOperatorsLinks = allKeywords.Where(item => bitwiseOperators.Contains(item.Key));
             IEnumerable<KeyValuePair<string, string>> logicalLinks = allKeywords.Where(item => logicalOperators.Contains(item.Key));
 
-            // exclude logical operators, have other format            
-            IEnumerable<KeywordInfoModel> result = keywordsLinks.Select(async item => await GetKeywordInfo(item)).Select(item => item.Result);
+            // online info exclude logical operators, have other format            
+            IEnumerable<KeywordInfoModel> result = keywordsLinks.Select(async item => await GetOnlineKeywordInfo(item)).Select(item => item.Result);
+
+            // get operators info from local keywords
+            result = result.Concat(bitwiseOperatorsLinks.Concat(logicalLinks).Select(item => GetKeywordInfo(item)));
 
             return JsonSerializer.Serialize(result, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         }
@@ -91,7 +94,7 @@ namespace ZxBasicInstructionSetGenerator
             return matches.ToDictionary(keySelector => keySelector.Groups["keyword"].Value, valueSelector => valueSelector.Groups["url"].Value);
         }
 
-        private async Task<KeywordInfoModel> GetKeywordInfo(KeyValuePair<string, string> keywordLink)
+        private async Task<KeywordInfoModel> GetOnlineKeywordInfo(KeyValuePair<string, string> keywordLink)
         {
             string link = $"{BaseUrl}{keywordLink.Value}";
             string linkFolder = link.Substring(0, link.LastIndexOf('/') + 1);
@@ -104,10 +107,10 @@ namespace ZxBasicInstructionSetGenerator
                 Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => OK");
 
                 // apply hack:
-                description = hackCodeMarkdownRegex.Replace(keyWordData, (match) => match.Value.Replace("\n\n", "\n"));
+                description = hackCodeMarkdownRegex.Replace(keyWordData, match => match.Value.Replace("\n\n", "\n"));
 
                 // set absolute urls in markdowns
-                description = linksReplaceRegex.Replace(keyWordData, (match) =>
+                description = linksReplaceRegex.Replace(description, (match) =>
                 {
                     string urlValue = match.Groups["url"].Value;
                     return urlValue.StartsWith("http") ? match.Value : match.Value.Replace(urlValue, $"{linkFolder}{urlValue}");
@@ -117,16 +120,16 @@ namespace ZxBasicInstructionSetGenerator
                 description = Regex.Replace(description, string.Format(titleRegexPattern, 1), string.Empty);
 
                 // set titles ## (2) in markdown bold
-                description = Regex.Replace(description, string.Format(titleRegexPattern, 2), (match) => $"**{match.Groups["title"].Value.Trim()}**\n\n", RegexOptions.Multiline);
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 2), match => $"**{match.Groups["title"].Value.Trim()}**\n\n", RegexOptions.Multiline);
 
                 // change titles ### (3) in markdown italic
-                description = Regex.Replace(description, string.Format(titleRegexPattern, 3), (match) => $"*{match.Groups["title"].Value.Trim()}*\n\n", RegexOptions.Multiline);
+                description = Regex.Replace(description, string.Format(titleRegexPattern, 3), match => $"*{match.Groups["title"].Value.Trim()}*\n\n", RegexOptions.Multiline);
             }
             catch (WebException ex)
             {
-                Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => ERROR: {ex.Message}");
+                WriteToConsoleInColor(ConsoleColor.Red, $"'{keywordLink.Key}':'{keywordLink.Value}' => ERROR: {ex.Message}");
 
-                description = TryGetFromAlternativeKeywords(keywordLink.Key.ToUpper());
+                description = TryGetDescriptionFromLocalKeywords(keywordLink.Key.ToUpper());
             }
 
             KeywordInfoModel result = new ()
@@ -139,12 +142,35 @@ namespace ZxBasicInstructionSetGenerator
             return result;
         }
 
-        private string TryGetFromAlternativeKeywords(string keyword)
+        private KeywordInfoModel GetKeywordInfo(KeyValuePair<string, string> keywordLink)
         {
-            Console.WriteLine("Try get from alternative keywords");
-            string result = alternativeKeywords.FirstOrDefault(item => item.Keyword == keyword)?.Description ?? string.Empty;
-            if (null == result) WriteToConsoleInColor(ConsoleColor.Red, "ERROR: Not found in alternative keywords");
-            else WriteToConsoleInColor(ConsoleColor.Green, "Found in alternative keywords");
+            try
+            {
+                KeywordInfoModel keyword = localKeywords.First(item => item.Keyword == keywordLink.Key);
+                Console.WriteLine($"'{keywordLink.Key}':'{keywordLink.Value}' => OK");
+
+                return new()
+                {
+                    Keyword = keywordLink.Key.ToUpper(),
+                    Description = keyword.Description,
+                    Link = keyword.Link,
+                };
+            }
+            catch (Exception ex)
+            {
+                WriteToConsoleInColor(ConsoleColor.Red, $"'{keywordLink.Key}':'{keywordLink.Value}' => ERROR: {ex.Message}");
+            }
+
+            return null;
+        }
+
+
+        private string TryGetDescriptionFromLocalKeywords(string keyword)
+        {
+            Console.WriteLine("Try get from local keywords");
+            string result = localKeywords.FirstOrDefault(item => item.Keyword == keyword)?.Description ?? string.Empty;
+            if (null == result) WriteToConsoleInColor(ConsoleColor.Red, "ERROR: Not found in local keywords");
+            else WriteToConsoleInColor(ConsoleColor.Green, "Found in local keywords");
             return result;
         }
 
